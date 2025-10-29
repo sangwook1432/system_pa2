@@ -14,16 +14,31 @@ const char *pa2_basename(const char *path){
   return base ? base + 1: path;
 }
 
-int handle_rename_error(const char *source,const char *target){
-  const char *source_basename = pa2_basename(source);
-  if(errno = EINVAL){
-    fprintf(stderr,"pa2_mv: cannot move '%s' to a subdirectory of itself, '%s'\n",source_basename,target);
-  }
-  else{
-    fprintf(stderr,"pa2_mv: cannot move '%s' to '%s': ",source_basename,target);
-    perror("");
-  }
-  return EXIT_FAILURE;
+int handle_rename_error(const char *source_path, const char *target_path) {
+    const char *source_basename = pa2_basename(source_path);
+    fprintf(stderr, "pa2_mv: ");
+    if (errno == ENOENT) {
+        fprintf(stderr, "cannot move '%s' to '%s': No such file or directory\n", source_basename, target_path);
+    } 
+    else if (errno == ENOTDIR) {
+         fprintf(stderr, "cannot move '%s' to '%s': Not a directory\n", source_basename, target_path);
+    } 
+    else if (errno == EACCES || errno == EPERM) {
+        fprintf(stderr, "cannot move '%s' to '%s': Permission denied\n", source_basename, target_path);
+    } 
+    else if (errno == EINVAL && source_path != NULL && target_path != NULL && strncmp(target_path, source_path, strlen(source_path)) == 0 && target_path[strlen(source_path)] == '/') {
+        fprintf(stderr, "cannot move '%s' to a subdirectory of itself, '%s'\n", source_basename, target_path);
+    } 
+    else if (errno == EISDIR) {
+        fprintf(stderr, "cannot move '%s' to '%s': Is a directory\n", source_basename, target_path);
+    } 
+    else if (errno == EXDEV) {
+        fprintf(stderr, "cannot move '%s' to '%s': Invalid cross-device link\n", source_basename, target_path);
+    } 
+    else if (errno == ENOTEMPTY || errno == EEXIST) {
+        fprintf(stderr, "cannot move '%s' to '%s': Directory not empty\n", source_basename, target_path);
+    }
+    return EXIT_FAILURE;
 }
 
 int main(int argc,char *argv[]) {
