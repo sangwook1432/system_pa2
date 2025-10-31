@@ -23,7 +23,7 @@ int handle_rename_error(const char *source_path, const char *target_path) {
     else if (errno == ENOTDIR) {
          fprintf(stderr, "cannot move '%s' to '%s': Not a directory\n", source_basename, target_path);
     } 
-    else if (errno == EACCES || errno == EPERM) {
+    else if (errno == EACCES) {
         fprintf(stderr, "cannot move '%s' to '%s': Permission denied\n", source_basename, target_path);
     } 
     else if (errno == EINVAL && source_path != NULL && target_path != NULL && strncmp(target_path, source_path, strlen(source_path)) == 0 && target_path[strlen(source_path)] == '/') {
@@ -31,15 +31,13 @@ int handle_rename_error(const char *source_path, const char *target_path) {
     } 
     else if (errno == EISDIR) {
         fprintf(stderr, "cannot move '%s' to '%s': Is a directory\n", source_basename, target_path);
-    } 
-    else if (errno == EXDEV) {
-        fprintf(stderr, "cannot move '%s' to '%s': Invalid cross-device link\n", source_basename, target_path);
-    } 
+    }  
     else if (errno == ENOTEMPTY || errno == EEXIST) {
         fprintf(stderr, "cannot move '%s' to '%s': Directory not empty\n", source_basename, target_path);
     }
     return EXIT_FAILURE;
 }
+
 
 int main(int argc,char *argv[]) {
   if(argc == 1){
@@ -70,10 +68,12 @@ int main(int argc,char *argv[]) {
     }
     if(dest_is_dir){
       const char *source_basename = pa2_basename(source_path);
-      int len = snprintf(target_path,PATH_MAX,"%s/%s",dest_arg,source_basename);
-      if(len >= PATH_MAX || len < 0){
-        fprintf(stderr,"pa2_mv: target path is too long\n");
-        return EXIT_FAILURE;
+      size_t dest_len = strlen(dest_arg);
+      if(dest_len > 0 && dest_arg[dest_len-1] == '/'){
+	      snprintf(target_path,PATH_MAX,"%s%s",dest_arg,source_basename);
+      }
+      else{
+	      snprintf(target_path,PATH_MAX,"%s%s",dest_arg,source_basename);
       }
     }
     else{
@@ -113,11 +113,12 @@ int main(int argc,char *argv[]) {
         continue;
       }
       const char *source_basename = pa2_basename(source_path);
-      int len = snprintf(target_path,PATH_MAX,"%s/%s",directory_path,source_basename);
-      if(len >= PATH_MAX || len < 0){
-        fprintf(stderr, "pa2_mv: target path for '%s' is too long\n",source_basename);
-        status = EXIT_FAILURE;
-        continue;
+      size_t dir_len = strlen(directory_path);
+      if(dir_len > 0 && directory_path[dir_len-1] == '/'){
+	      snprintf(target_path,PATH_MAX,"%s%s",directory_path,source_basename);
+      }
+      else{
+	      snprintf(target_path,PATH_MAX,"%s/%s",directory_path,source_basename);
       }
       bool target_exist_check = (stat(target_path,&target_stat) == 0);
       if(target_exist_check && source_stat.st_dev == target_stat.st_dev && source_stat.st_ino == target_stat.st_ino){
@@ -126,7 +127,7 @@ int main(int argc,char *argv[]) {
         continue;
       }
       if(rename(source_path,target_path) != 0){
-        status = handle_rename_error_simple(source_path,target_path);
+        status = handle_rename_error(source_path,target_path);
       }
     }
   }
