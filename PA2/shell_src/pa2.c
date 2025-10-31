@@ -5,6 +5,7 @@
 #include <string.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#include <errno.h>
 #include "helper.h"
 
 void set_up_readline_on_newline() {
@@ -59,7 +60,7 @@ status_t run_exit(Command* command, Jobs* jobs, status_t last_status) {
     char *endptr;
     const char *code_str = command->args[1];
     errno = 0;
-    long num = strtol(coe_str,&endptr,10);
+    long num = strtol(code_str,&endptr,10);
     if(errno != 0 || *endptr != '\0' || endptr == code_str){
       fprintf(stderr,"exit: %s: invalid integer\n",code_str);
       return 1;
@@ -105,7 +106,7 @@ status_t run_pwd(Command* command) {
   bool flag = false;
   for(size_t i = 1;i < command->num_args;i++){
     if(strcmp(command->args[i],"-P") == 0){
-      physical = true;
+      flag = true;
       break;
     }
   }
